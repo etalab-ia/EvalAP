@@ -80,6 +80,7 @@ class Dataset(Base):
     has_output = Column(Boolean)
     size = Column(Integer)
     readme = Column(Text)
+    default_metric = Column(Text)
 
 
 class Model(Base):
