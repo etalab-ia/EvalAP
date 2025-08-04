@@ -1,6 +1,7 @@
 import os
 import re
 import shutil
+import yaml
 from datetime import datetime
 
 import aiofiles
@@ -22,6 +23,8 @@ from evalap.runners import dispatch_retries, dispatch_tasks
 
 router = APIRouter()
 
+#TODO: change path
+CONFIG_FILE_PATH = "/Users/audrey_clevy/code/evalap/evalap/config/products/product_config.yml"
 
 def _needs_output(db_exp):
     return not db_exp.model.has_raw_output and any(
@@ -565,6 +568,37 @@ def read_ops_eco(db: Session = Depends(get_db)):
         "answers": answers_data,
         "observation_table": observations_data,
     }
+
+
+#
+# Config Products
+#
+
+@router.get("/config", response_model=dict, tags=["config"])
+def read_config():
+    try:
+        with open(CONFIG_FILE_PATH, 'r') as file:
+            config = yaml.safe_load(file)
+        return config
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Config file not found")
+    except yaml.YAMLError as e:
+        raise HTTPException(status_code=400, detail=f"Error parsing config file: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+
+@router.post("/config", response_model=dict, tags=["config"])
+def write_config(config: dict, admin_check=Depends(admin_only)):
+    try:
+        with open(CONFIG_FILE_PATH, 'w') as file:
+            yaml.safe_dump(config, file)
+        return {"status": "success", "detail": "Config file updated"}
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Config file not found")
+    except yaml.YAMLError as e:
+        raise HTTPException(status_code=400, detail=f"Error writing to config file: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
 
 #

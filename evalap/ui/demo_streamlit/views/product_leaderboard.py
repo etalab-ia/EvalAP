@@ -16,8 +16,6 @@ from utils import fetch, _rename_model_variants, calculate_tokens_per_second
 
 DEFAULT_METRIC = "judge_exactness"
 
-
-#@st.cache_data(ttl=300)
 def load_product_config() -> dict:
     config_path = Path("evalap") / "config" / "products" / "product_config.yml"
 
@@ -50,7 +48,6 @@ def load_product_config() -> dict:
         return {"products": {}}
 
     return config
-
 
 
 def fetch_experiment_results(exp_id: int) -> dict:
@@ -386,7 +383,7 @@ def main() -> None:
 
     product_config = load_product_config()
 
-    if not product_config.get("products"):  
+    if not product_config.get("products"):
         st.info("No product configuration found.")
         st.stop()
 
@@ -394,6 +391,46 @@ def main() -> None:
 
     for tab, product_info in zip(product_tabs, product_config["products"].values()):
         with tab:
+
+            st.divider()
+
+            # Read Config files
+            st.subheader("Test Read Config")
+            if st.button("Read Config", key=f"read_config_button_{product_info['name']}"):
+                config = fetch("get", "/config")
+                if config is None:
+                    st.error("No response received from server. Check your connection.")
+                elif "error" in config:
+                    st.error(config["error"])
+                else:
+                    st.success("Config read successfully!")
+                    st.json(config)
+
+            st.divider()
+
+
+            # Write Config -- KO for the moment
+            st.subheader("Test Write Config")
+            new_config = st.text_area(
+                "Enter new config in YAML format",
+                value=yaml.dump(product_config),
+                key=f"config_text_area_{product_info['name']}"
+            )
+            if st.button("Write Config", key=f"write_config_button_{product_info['name']}"):
+                response = fetch("post", "/config", data=new_config)
+
+                if response is None:
+                    st.error("No response received from server. Check your connection.")
+                elif "error" in response:
+                    st.error(response["error"])
+                elif response.get("status") == "success":
+                    st.success("Config written successfully!")
+                    st.json(response)
+                else:
+                    st.error("Unexpected response from server.")
+                    st.write("Response:", response)
+
+            st.divider()
             st.header(f"{product_info['name'].replace('_', ' ')}")
 
             datasets = fetch_datasets()
